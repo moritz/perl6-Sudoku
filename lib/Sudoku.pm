@@ -24,6 +24,19 @@ class Sudoku {
         @!rows.map({ .map({ $_ == 0 ?? '.' !! $_ }).join ~ "\n" }).join;
     }
 
+    method add-number($n, :$x, :$y) {
+        given @!rows[$y][$x] {
+            if  $_ && $_ !== $n {
+                die "Trying to set ($x, $y) to $n, but it is already set (to $_)";
+            }
+        }
+        @!constraints[$y][$y] = [0 xx $!size];
+        for ^$!size {
+            @!constraints[$y][$_][$n - 1] = 0;
+            @!constraints[$_][$x][$n - 1] = 0;
+        }
+    }
+
     method init() {
         for ^$!size X ^$!size -> $x, $y {
             @!constraints[$y][$x] = [ True xx $!size ];
