@@ -26,7 +26,7 @@ class Sudoku {
 
     method init() {
         for ^$!size X ^$!size -> $x, $y {
-            $constraints[$y][$x] = [ True xx $!size ];
+            @!constraints[$y][$x] = [ True xx $!size ];
         }
         for ^$!size {
             # rows
