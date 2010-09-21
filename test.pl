@@ -19,4 +19,7 @@ my $puzzle = '000000009800060000004000051000005008000000700009001003300000600000
 
 my $s = Sudoku.from-string($puzzle);
 say $s;
-say $s.perl;
+say $s.constraints;
+$s.solve();
+say $s;
+#say $s.perl;
