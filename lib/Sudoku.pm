@@ -15,13 +15,18 @@ class Sudoku::Constraint {
 class Sudoku {
     has $.block-size = 3;
     has $.size = $.block-size ** 2;
-    has @.rows;
+    has @!rows;
     has @!coverage;
 
-    has @.constraints;
+    has @!constraints;
+
+    has @!available;
 
     method from-string($s) {
-        my $o = self.new(rows => (^9).map: {[0 xx 9]});
+        my $o = self.new(
+            rows      => (^9).map({[0 xx 9]}),
+            available => (^9).map({[(^9).map: { [ True xx 9 ]}]}),
+        );
         $o.init();
         for ^$o.size X ^$o.size -> $y, $x {
             my $i = 9 * $y + $x;
@@ -37,14 +42,22 @@ class Sudoku {
     }
 
     method add-hint($n, :$x, :$y) {
+#        say "Adding hint $n at ($x, $y)";
         given @!rows[$y][$x] {
             if  $_ && $_ !== $n {
                 die "Trying to set ($x, $y) to $n, but it is already set (to $_)";
+            } elsif $_ {
+#                say "... but it's already there";
+                return;
             }
         }
         @!rows[$y][$x] = $n;
-        for @(@!coverage[$y][$x]) {
-            .delete-symbol($n);
+        @!available[$y][$x][$_] = False for ^$!size;
+        for @(@!coverage[$y][$x]) -> $c {
+            $c.delete-symbol($n);
+            for $c.xy -> $mx, $my {
+                @!available[$my][$mx][$n - 1] = False;
+            }
         }
     }
 
@@ -84,6 +97,18 @@ class Sudoku {
     }
 
     method simple-fill() {
+        for ^$!size X ^$!size -> $x, $y {
+            if 1 == [+] @(@!available[$y][$x]) {
+                # just one number allowed here... find it
+                for ^$!size -> $n {
+                    if @!available[$y][$x][$n] {
+                        $.add-hint($n + 1, :$x, :$y);
+                        last;
+                    }
+                }
+            }
+        }
+
         for @!constraints -> $c {
             my @rc = $c.remaining-symbols.keys;
             if @rc == 1 {
@@ -91,7 +116,7 @@ class Sudoku {
                 # find out where it is
                 for $c.xy -> $x, $y {
                     if @!rows[$y][$x] == 0 {
-                        say "Adding @rc[0] to ($x, $y)";
+#                        warn "Adding @rc[0] to ($x, $y)";
                         $.add-hint(@rc[0], :$x, :$y);
                         last;
                     }
