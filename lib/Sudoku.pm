@@ -42,7 +42,7 @@ class Sudoku {
     }
 
     method add-hint($n, :$x, :$y) {
-#        say "Adding hint $n at ($x, $y)";
+        say "Adding hint $n at ($x, $y)";
         given @!rows[$y][$x] {
             if  $_ && $_ !== $n {
                 die "Trying to set ($x, $y) to $n, but it is already set (to $_)";
@@ -93,7 +93,13 @@ class Sudoku {
     }
 
     method solve() {
-        $.simple-fill();
+        my $track = @!rows.join('|');
+        loop {
+            $.simple-fill();
+            my $new-track = @!rows.join('|');
+            last if $track eq $new-track;
+            $track = $new-track;
+        }
     }
 
     method simple-fill() {
