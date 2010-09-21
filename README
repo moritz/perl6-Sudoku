@@ -1,0 +1,7 @@
+This is a Sudoku class and solver, designed for flexibility (but for example
+the constructors aren't yet sufficiently flexible).
+
+A simple solving algorithm is implemented, but it doesn't solve all possible
+Sudokus yet (in fact, it doesn't fully solves the one I tried with).
+
+License: Artistic License 2.0
