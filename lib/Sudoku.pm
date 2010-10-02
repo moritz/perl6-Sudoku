@@ -21,6 +21,7 @@ class Sudoku {
     has @!constraints;
 
     has @!available;
+    has $.stuck = False;
 
     method from-string($s) {
         my $o = self.new(
@@ -37,14 +38,99 @@ class Sudoku {
         $o;
     }
 
+    method check() {
+        for ^$!size X ^$!size -> $x, $y {
+            if @!rows[$y][$x] == 0 && none(@(@!available[$y][$x])) {
+                die "Stuck here at ($x, $y), no meaningful way out!";
+            }
+        }
+    }
+
+    method is-solved() {
+        for @!rows {
+            return False if any(@($_)) == 0;
+        }
+        True;
+    }
+
     method Str {
         @!rows.map({ .map({ $_ == 0 ?? '.' !! $_ }).join ~ "\n" }).join;
+    }
+
+    # returns a data structure that can be turned into SVG with
+    # the SVG module from http://github.com/moritz/svg/
+    # like this:
+    #
+    # say SVG.serialize: 'svg' => [
+    #       width  => 310,
+    #       height => 310,
+    #       $sudoku.SVG-tree,
+    #   ];
+    method SVG-tree(:$output-size = 304, :$line-width=1) {
+        my $offset      = 2 * $line-width;
+        my $upto        = $output-size - $offset;
+        my $line-length = $output-size - 2 * $offset;
+        my $cell        = $line-length / $!size;
+        gather {
+            for 1..^$!size {
+                my $stroke-width = $line-width;
+                my $color = 'grey';
+                if $_ %% $!block-size {
+                    $stroke-width *= 1.5;
+                    $color = 'black';
+                }
+                # horizontal grid
+                take 'line' => [
+                    x1 => $offset,
+                    x2 => $upto,
+                    y1 => ($offset + $_ / $!size * $line-length),
+                    y2 => ($offset + $_ / $!size * $line-length),
+                    stroke => $color,
+                    :$stroke-width,
+                ];
+                # horizontal grid
+                take 'line' => [
+                    y1 => $offset,
+                    y2 => $upto,
+                    x1 => ($offset + $_ / $!size * $line-length),
+                    x2 => ($offset + $_ / $!size * $line-length),
+                    stroke => $color,
+                    :$stroke-width,
+                ];
+            }
+
+            # outer frame
+            take 'rect' => [
+                x => $offset,
+                y => $offset,
+                width  => $line-length,
+                height => $line-length,
+                stroke-width => 2.3 * $line-width,
+                stroke => 'black',
+                fill   => 'none'
+            ];
+
+            # numbers
+            for ^$!size X ^$!size -> $y, $x {
+                if @!rows[$y][$x] -> $symbol {
+                    take 'text' => [
+                        x => $offset + ($x + 0.5) * $cell,
+                        y => $offset + ($y + 0.5) * $cell,
+                        text-anchor       => 'middle',
+                        dominant-baseline => 'middle',
+                        font-weight       => 'bold',
+                        $symbol,
+                    ];
+                }
+            }
+        }
     }
 
     method add-hint($n, :$x, :$y) {
         say "Adding hint $n at ($x, $y)";
         given @!rows[$y][$x] {
             if  $_ && $_ !== $n {
+                $!stuck = True;
                 die "Trying to set ($x, $y) to $n, but it is already set (to $_)";
             } elsif $_ {
 #                say "... but it's already there";
